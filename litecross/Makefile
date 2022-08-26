@@ -139,12 +139,20 @@ src_toolchain: src_binutils src_gcc
 	mkdir $@.tmp
 	cd $@.tmp && ln -sf ../src_binutils/* .
 	cd $@.tmp && ln -sf ../src_gcc/* .
+	rm $@.tmp/include
+	mkdir $@.tmp/include
+	cd $@.tmp/include && ln -sf ../../src_binutils/include/* .
+	cd $@.tmp/include && ln -sf ../../src_gcc/include/* .
+	cd $@.tmp/include && ln -sf ../../../linux-4.4.10/linux-4.4.10/include/* .
 	$(if $(GMP_SRCDIR),cd $@.tmp && ln -sf ../src_gmp gmp)
 	$(if $(MPC_SRCDIR),cd $@.tmp && ln -sf ../src_mpc mpc)
 	$(if $(MPFR_SRCDIR),cd $@.tmp && ln -sf ../src_mpfr mpfr)
 	$(if $(ISL_SRCDIR),cd $@.tmp && ln -sf ../src_isl isl)
 	mv $@.tmp $@
 
+obj_sysroot/lib:
+	mkdir -p $@
+	
 obj_%:
 	mkdir -p $@
 
@@ -152,13 +160,13 @@ obj_sysroot/include:
 	mkdir -p $@
 
 obj_sysroot/usr: | obj_sysroot
-	ln -sf . $@
+	cmd /C "mklink obj_sysroot\usr ."
 
-obj_sysroot/lib64: | obj_sysroot
-	ln -sf lib $@
+obj_sysroot/lib64: | obj_sysroot obj_sysroot/lib
+	cmd /C "mklink obj_sysroot\lib64 lib"
 
 obj_toolchain/.lc_configured: | obj_toolchain src_toolchain
-	cd obj_toolchain && ../src_toolchain/configure $(FULL_TOOLCHAIN_CONFIG)
+	cd obj_toolchain && $(CURDIR)/src_toolchain/configure $(FULL_TOOLCHAIN_CONFIG)
 	touch $@
 
 obj_toolchain/gcc/.lc_built: | obj_toolchain/.lc_configured
@@ -166,7 +174,7 @@ obj_toolchain/gcc/.lc_built: | obj_toolchain/.lc_configured
 	touch $@
 
 obj_musl/.lc_configured: | obj_musl src_musl
-	cd obj_musl && ../src_musl/configure $(FULL_MUSL_CONFIG)
+	cd obj_musl && $(CURDIR)/src_musl/configure $(FULL_MUSL_CONFIG)
 	touch $@
 
 obj_sysroot/.lc_headers: | obj_musl/.lc_configured obj_sysroot
